@@ -1,0 +1,350 @@
+<?php
+
+/**
+ * Implements hook_theme()
+ */
+function audio_field_theme() {
+  return array(
+    'audio_field_jplayer' => array(
+      'variables' => array(
+        'lyrics' => 'vasya',
+        'lyrics_show' => FALSE,
+        'lyrics_collapsed' => FALSE,
+        'unique_id' => '',
+//        'email' => '',
+//        'phone' => '',
+//        'birthday' => '',
+//        'category' => '',
+//        'notes' => '',
+//        'photo' => '',
+//        'contact_exist' => false,
+      ),
+      'path' => drupal_get_path('module', 'audio_field') . '/templates',
+      'template' => 'jplayer',
+    ),
+  );
+}
+
+/**
+ * Implements hook_element_info().
+ * @return array
+ */
+function audio_field_element_info() {
+  return array(
+    'audio' => array(
+      '#input' => TRUE,
+      '#process' => array('audio_field_element_process'),
+//      '#element_validate' => array('audio_field_element_validate'),
+    ),
+  );
+}
+
+
+function audio_field_element_process($element, &$form_state) {
+
+  dsm($element);
+  dsm($form_state);
+
+  $default_value = array();
+  $default_value['title'] = isset($element['default_value']['audio_field']['title']) ? $element['default_value']['audio_field']['title'] : '';
+  $default_value['file'] = isset($element['default_value']['audio_field']['file']) ? $element['default_value']['audio_field']['file'] : '';
+  $default_value['lyrics'] = isset($element['default_value']['audio_field']['lyrics']) ? $element['default_value']['audio_field']['lyrics'] : '';
+
+  $element['audio_field'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Audio Field'),
+  );
+  $element['audio_field']['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Title'),
+    '#default_value' => isset($element['#value']['audio_field']['title']) ? $element['#value']['audio_field']['title'] : $default_value['title'],
+  );
+  $element['audio_field']['file'] = array(
+    '#type' => 'managed_file',
+    '#title' => t('File'),
+    '#upload_location' => 'public://audio_field/',
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('mp3'),
+    ),
+    '#default_value' => isset($element['#value']['audio_field']['file']) ? $element['#value']['audio_field']['file'] : $default_value['file'],
+  );
+  $element['audio_field']['lyrics'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Lyrics'),
+    '#default_value' => isset($element['#value']['audio_field']['lyrics']) ? $form_state[$name]['lyrics'] : $default_value['lyrics'],
+//    '#default_value' => 'dima',
+  );
+  return $element;
+}
+
+function form_type_audio_value($element, $edit = FALSE) {
+//  dsm($element, 'value element');
+//  dsm($element, 'value edit');
+}
+
+
+/**
+ * Implements hook_field_info().
+ * @return array
+ */
+function audio_field_field_info() {
+  return array(
+    'audio_field' => array(
+      'label' => t('Audio Field'),
+      'description' => t('Upload an mp3 file and play it with mp3 player.'),
+      'default_widget' => 'audio_field',
+      'default_formatter' => 'audio_field',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_info().
+ * @return array
+ */
+function audio_field_field_widget_info() {
+  return array(
+    'audio_field' => array(
+      'label' => t('Audio Field'),
+      'field types' => array('audio_field'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_form().
+ * @param $form
+ * @param $form_state
+ * @param $field
+ * @param $instance
+ * @param $langcode
+ * @param $items
+ * @param $delta
+ * @param $element
+ * @return mixed
+ */
+function audio_field_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  global $user;
+
+  dsm($form, 'form');
+
+//    dsm($form_state, 'form_state');
+//
+//    dsm($items);
+//    dsm($field);
+//    dsm($element);
+
+    if (in_array('administrator', $user->roles)) {
+    switch ($instance['widget']['type']) {
+      case 'audio_field':
+
+        if ($field['type'] == 'audio_field') {
+          $field_name = $field['field_name'];
+          foreach($items as $item) {
+  //          dsm($item);
+
+            $element['audio_field'] = array(
+              '#type' => 'audio',
+              '#title' => t('Audio Field'),
+  //            '#default_value' => isset($items[0]['fb_link']) ? $items[0]['fb_link'] : $default_value,
+
+              '#description' => t('Upload your mp3 file.'),
+            );
+          }
+
+        }
+
+
+        break;
+    } /* close switch */
+  } /* close if */
+  return $element;
+}
+
+/**
+ * Implements hook_field_presave().
+ */
+function audio_field_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  foreach ($items as $delta => $item) {
+    if (isset($item['audio_field']['audio_field'])) {
+      $items[$delta]['title'] = $item['audio_field']['audio_field']['title'];
+      $items[$delta]['file'] = $item['audio_field']['audio_field']['file'];
+      $items[$delta]['lyrics'] = $item['audio_field']['audio_field']['lyrics'];
+      if ($file = file_load($items[$delta]['file'])) {
+        $file->status = FILE_STATUS_PERMANENT;
+        file_save($file);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_field_settings_form().
+ */
+function audio_field_field_settings_form($field, $instance, $has_data) {
+  $settings = $field['settings'];
+  $default = isset($settings['lyrics_display']) ? $settings['lyrics_display'] : 1;
+  $form = array();
+  $form['lyrics_display'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show lyrics'),
+    '#default_value' => $default,
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_field_formatter_info().
+ * @return array
+ */
+function audio_field_field_formatter_info() {
+  return array(
+    'audio_field' => array(
+      'label' => t('Audio Field Formatter'),
+      'field types' => array('audio_field'),
+      'settings' => array(
+        'display_lyrics_as' => 'Collapsed',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ * @param $field
+ * @param $instance
+ * @param $view_mode
+ * @param $form
+ * @param $form_state
+ * @return mixed
+ */
+function audio_field_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  /* Switch fot different formatters. */
+  switch ($display['type']) {
+    case 'audio_field':
+      $form['display_lyrics_as'] = array(
+        '#type' => 'select',
+        '#title' => t('Display lyrics as'),
+        '#options' => array(
+          'Collapsed' => t('Collapsed'),
+          'Expanded' => t('Expanded'),
+        ),
+        '#default_value' => $settings['display_lyrics_as'],
+        '#description' =>  t('Do you want lyrics to be collapsed or expanded?'),
+      );
+      break;
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ * @param $field
+ * @param $instance
+ * @param $view_mode
+ * @return string
+ */
+function audio_field_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  $summary = '';
+
+  switch ($display['type']) {
+    case 'audio_field':
+      $summary = '<p>' . t('Display lyrics as:') . ' ' . $settings['display_lyrics_as'] . '</p>';
+      break;
+  }
+  return $summary;
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ *
+ * @param $entity_type
+ * @param $entity
+ * @param $field
+ * @param $instance
+ * @param $langcode
+ * @param $items
+ * @param $display
+ * @return array
+ */
+function audio_field_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $output = array();
+//  dsm($items);
+
+  $field_settings = $field['settings'];
+  $formatter_settings = $display['settings'];
+
+  switch ($display['type']) {
+    case 'audio_field':
+      foreach ($items as $delta => $item) {
+
+//        dsm($item);
+
+        if (isset($item['file'])) {
+          $fid = $item['file'];
+          $file = file_load($fid);
+          $url = $file ? file_create_url($file->uri) : '';
+
+          $output[] = array(
+            '#type' => 'container',
+            '#attributes' => array(
+              'class' => array('audio-field-wrap'),
+            ),
+          );
+
+          $unique_id = drupal_html_id('jplayer');
+          $output[0][] = array(
+              '#theme' => 'audio_field_jplayer',
+              '#attached' => array(
+                'js' => array(
+                  libraries_get_path('jplayer') . '/jquery.jplayer.min.js',
+                  drupal_get_path('module', 'audio_field') . '/js/script.js',
+                  array(
+                    'data' => array(
+                      'audioField' => array(
+                        $unique_id => $url,
+                      ),
+                    ),
+                    'type' => 'setting'
+                  ),
+                ),
+                'css' => array(
+                  drupal_get_path('module', 'audio_field') . '/css/jplayer.blue.monday.css',
+                ),
+              ),
+              '#unique_id' => $unique_id,
+              '#lyrics' => $item['lyrics'],
+              '#lyrics_show' => $field_settings['lyrics_display'] ? TRUE : FALSE,
+              '#lyrics_collapsed' => $formatter_settings['display_lyrics_as'] == 'Collapsed' ? TRUE : FALSE,
+            );
+//          $output['#lyrics'] = $item['lyrics'];
+//          if ($field_settings['lyrics_display']) {
+//            $output['#lyrics_show'] = TRUE;
+//          }
+//          if ($formatter_settings['display_lyrics_as'] == 'Collapsed') {
+//            $output['#lyrics_collapsed'] = TRUE;
+//          }
+        }
+      } /* close foreach */
+      break;
+  }
+
+  dsm($output);
+
+  return $output;
+}
+
+/**
+ * Implements hook_field_is_empty().
+ * @param $item
+ * @param $field
+ * @return bool
+ */
+function audio_field_field_is_empty($item, $field) {
+  return empty($item['audio_field']);
+}

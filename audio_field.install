@@ -1,0 +1,30 @@
+<?php
+
+/**
+ * Implements hook_field_schema().
+ * @param $field
+ * @return array
+ */
+function audio_field_field_schema($field) {
+  if (isset($field['type']) && $field['type'] == 'audio_field') {
+    return array(
+      'columns' => array(
+        'title' => array(
+          'description' => t('Song title.'),
+          'type' => 'varchar',
+          'length' => 255,
+        ),
+        'file' => array(
+          'description' => t('Mp3 file ID.'),
+          'type' => 'int',
+          'length' => 10,
+        ),
+        'lyrics' => array(
+          'description' => t('Song lyrics.'),
+          'type' => 'text',
+          'size' => 'normal',
+        ),
+      ),
+    );
+  }
+}
