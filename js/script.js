@@ -3,17 +3,15 @@
     attach: function (context, settings) {
       if (context == document) {
 
-//        console.log(settings.audioField);
-
         if (settings.audioField != undefined) {
           var fields = settings.audioField;
           for (var id in fields) {
-//            console.log(fields[id]);
             $('#' + id).jPlayer({
               ready: function (event) {
+                var field = fields[$(this).attr('id')];
                 $(this).jPlayer("setMedia", {
-                  title: "Bubble",
-                  mp3: fields[id]
+                  title: field.song_title,
+                  mp3: field.file_url
                 });
               },
               cssSelectorAncestor: '#' + id + ' + .jquery-player-container',
@@ -24,9 +22,6 @@
               remainingDuration: true,
               toggleDuration: true
             });
-
-            console.log('#' + id + ' + .jquery-player-container');
-
           }
         }
 
